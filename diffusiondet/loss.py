@@ -310,6 +310,11 @@ class HungarianMatcherDynamicK(nn.Module):
             assert bs == len(targets)
             for batch_idx in range(bs):
                 bz_boxes = out_bbox[batch_idx]  # [num_proposals, 4]
+                # Ensure boxes are valid (x2 >= x1, y2 >= y1) to prevent assertion errors
+                bz_boxes = torch.cat([
+                    torch.min(bz_boxes[:, :2], bz_boxes[:, 2:]),
+                    torch.max(bz_boxes[:, :2], bz_boxes[:, 2:])
+                ], dim=-1)
                 bz_out_prob = out_prob[batch_idx]
                 bz_tgt_ids = targets[batch_idx]["labels"]
                 num_insts = len(bz_tgt_ids)
@@ -323,6 +328,11 @@ class HungarianMatcherDynamicK(nn.Module):
 
                 bz_gtboxs = targets[batch_idx]['boxes']  # [num_gt, 4] normalized (cx, xy, w, h)
                 bz_gtboxs_abs_xyxy = targets[batch_idx]['boxes_xyxy']
+                # Ensure ground truth boxes are also valid
+                bz_gtboxs_abs_xyxy = torch.cat([
+                    torch.min(bz_gtboxs_abs_xyxy[:, :2], bz_gtboxs_abs_xyxy[:, 2:]),
+                    torch.max(bz_gtboxs_abs_xyxy[:, :2], bz_gtboxs_abs_xyxy[:, 2:])
+                ], dim=-1)
                 fg_mask, is_in_boxes_and_center = self.get_in_boxes_info(
                     box_xyxy_to_cxcywh(bz_boxes),  # absolute (cx, cy, w, h)
                     box_xyxy_to_cxcywh(bz_gtboxs_abs_xyxy),  # absolute (cx, cy, w, h)
